@@ -31,7 +31,8 @@ def apply_clipped_optimizer(opt_fcn,
                             loss,
                             clip_norm=.1,
                             clip_single=.03,
-                            clip_global_norm=False):
+                            clip_global_norm=False
+                            ):
   gvs = opt_fcn.compute_gradients(loss)
 
   if clip_global_norm:

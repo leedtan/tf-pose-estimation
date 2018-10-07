@@ -10,6 +10,7 @@ import time
 import sys
 INIT_TIME = time.time()
 LASTTIME = time.time()
+import nn_utils
 
 import cv2
 import numpy as np
@@ -67,7 +68,7 @@ if __name__ == '__main__':
         '--model', default='personlab_resnet101', help='model name')
     parser.add_argument('--datapath', type=str, default='dataset/annotations/')
     parser.add_argument('--imgpath', type=str, default='dataset/')
-    parser.add_argument('--batchsize', type=int, default=96)
+    parser.add_argument('--batchsize', type=int, default=16)
     parser.add_argument('--gpus', type=int, default=1)
     parser.add_argument('--max-epoch', type=int, default=30)
     parser.add_argument('--lr', type=str, default='0.01')
@@ -184,9 +185,9 @@ if __name__ == '__main__':
 
     with tf.device(tf.DeviceSpec(device_type="CPU")):
         # define loss
-        total_loss = tf.reduce_sum(losses) / args.batchsize
-        total_loss_ll_paf = tf.reduce_sum(last_losses_l1) / args.batchsize
-        total_loss_ll_heat = tf.reduce_sum(last_losses_l2) / args.batchsize
+        total_loss = tf.reduce_mean(losses)
+        total_loss_ll_paf = tf.reduce_mean(last_losses_l1)
+        total_loss_ll_heat = tf.reduce_mean(last_losses_l2)
         total_loss_ll = tf.reduce_mean([total_loss_ll_paf, total_loss_ll_heat])
 
         # define optimizer
@@ -209,12 +210,13 @@ if __name__ == '__main__':
                 global_step, boundaries, lrs)
 
     # optimizer = tf.train.RMSPropOptimizer(learning_rate, decay=0.0005, momentum=0.9, epsilon=1e-10)
-    optimizer = tf.train.AdamOptimizer(learning_rate, epsilon=1e-8)
+    opt = tf.train.AdamOptimizer(learning_rate, epsilon=1e-8)
     update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
     with tf.control_dependencies(update_ops):
         checktime('about to define optimizer')
-        train_op = optimizer.minimize(
-            total_loss, global_step, colocate_gradients_with_ops=True)
+        train_op, grad_norm = nn_utils.apply_clipped_optimizer(opt, total_loss)
+        # train_op = optimizer.minimize(
+        #     total_loss, global_step, colocate_gradients_with_ops=True)
         checktime('defined optimizer')
     logger.info('define model-')
 
@@ -267,7 +269,9 @@ if __name__ == '__main__':
                 loader = tf.train.Saver(net.restorable_variables())
                 loader.restore(sess, pretrain_path)
             elif '.npy' in pretrain_path:
-                net.load(pretrain_path, sess, False)
+                checktime('skipping restoration')
+                pass
+                #net.load(pretrain_path, sess, False)
             checktime('restored')
             logger.info('Restore pretrained weights...Done')
 
