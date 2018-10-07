@@ -11,12 +11,12 @@ from tf_pose import common
 
 DEFAULT_PADDING = 'SAME'
 
-
 _init_xavier = tf.contrib.layers.xavier_initializer()
 _init_norm = tf.truncated_normal_initializer(stddev=0.01)
 _init_zero = slim.init_ops.zeros_initializer()
 _l2_regularizer_00004 = tf.contrib.layers.l2_regularizer(0.00004)
-_l2_regularizer_convb = tf.contrib.layers.l2_regularizer(common.regularizer_conv)
+_l2_regularizer_convb = tf.contrib.layers.l2_regularizer(
+    common.regularizer_conv)
 
 
 def layer(op):
@@ -57,9 +57,8 @@ class BaseNetwork(object):
         # If true, the resulting variables are set as trainable
         self.trainable = trainable
         # Switch variable for dropout
-        self.use_dropout = tf.placeholder_with_default(tf.constant(1.0),
-                                                       shape=[],
-                                                       name='use_dropout')
+        self.use_dropout = tf.placeholder_with_default(
+            tf.constant(1.0), shape=[], name='use_dropout')
         self.setup()
 
     @abc.abstractmethod
@@ -136,7 +135,11 @@ class BaseNetwork(object):
 
     def make_var(self, name, shape, trainable=True):
         '''Creates a new TensorFlow variable.'''
-        return tf.get_variable(name, shape, trainable=self.trainable & trainable, initializer=tf.contrib.layers.xavier_initializer())
+        return tf.get_variable(
+            name,
+            shape,
+            trainable=self.trainable & trainable,
+            initializer=tf.contrib.layers.xavier_initializer())
 
     def validate_padding(self, padding):
         '''Verifies that the padding is one of the supported ones.'''
@@ -165,55 +168,90 @@ class BaseNetwork(object):
 
     @layer
     def upsample(self, input, factor, name):
-        return tf.image.resize_bilinear(input, [int(input.get_shape()[1]) * factor, int(input.get_shape()[2]) * factor], name=name)
+        return tf.image.resize_bilinear(
+            input, [
+                int(input.get_shape()[1]) * factor,
+                int(input.get_shape()[2]) * factor
+            ],
+            name=name)
 
     @layer
-    def separable_conv(self, input, k_h, k_w, c_o, stride, name, relu=True, set_bias=True):
-        with slim.arg_scope([slim.batch_norm], decay=0.999, fused=common.batchnorm_fused, is_training=self.trainable):
-            output = slim.separable_convolution2d(input,
-                                                  num_outputs=None,
-                                                  stride=stride,
-                                                  trainable=self.trainable,
-                                                  depth_multiplier=1.0,
-                                                  kernel_size=[k_h, k_w],
-                                                  # activation_fn=common.activation_fn if relu else None,
-                                                  activation_fn=None,
-                                                  # normalizer_fn=slim.batch_norm,
-                                                  weights_initializer=_init_xavier,
-                                                  # weights_initializer=_init_norm,
-                                                  weights_regularizer=_l2_regularizer_00004,
-                                                  biases_initializer=None,
-                                                  padding=DEFAULT_PADDING,
-                                                  scope=name + '_depthwise')
+    def separable_conv(self,
+                       input,
+                       k_h,
+                       k_w,
+                       c_o,
+                       stride,
+                       name,
+                       relu=True,
+                       set_bias=True):
+        with slim.arg_scope(
+            [slim.batch_norm],
+                decay=0.999,
+                fused=common.batchnorm_fused,
+                is_training=self.trainable):
+            output = slim.separable_convolution2d(
+                input,
+                num_outputs=None,
+                stride=stride,
+                trainable=self.trainable,
+                depth_multiplier=1.0,
+                kernel_size=[k_h, k_w],
+                # activation_fn=common.activation_fn if relu else None,
+                activation_fn=None,
+                # normalizer_fn=slim.batch_norm,
+                weights_initializer=_init_xavier,
+                # weights_initializer=_init_norm,
+                weights_regularizer=_l2_regularizer_00004,
+                biases_initializer=None,
+                padding=DEFAULT_PADDING,
+                scope=name + '_depthwise')
 
-            output = slim.convolution2d(output,
-                                        c_o,
-                                        stride=1,
-                                        kernel_size=[1, 1],
-                                        activation_fn=common.activation_fn if relu else None,
-                                        weights_initializer=_init_xavier,
-                                        # weights_initializer=_init_norm,
-                                        biases_initializer=_init_zero if set_bias else None,
-                                        normalizer_fn=slim.batch_norm,
-                                        trainable=self.trainable,
-                                        weights_regularizer=None,
-                                        scope=name + '_pointwise')
+            output = slim.convolution2d(
+                output,
+                c_o,
+                stride=1,
+                kernel_size=[1, 1],
+                activation_fn=common.activation_fn if relu else None,
+                weights_initializer=_init_xavier,
+                # weights_initializer=_init_norm,
+                biases_initializer=_init_zero if set_bias else None,
+                normalizer_fn=slim.batch_norm,
+                trainable=self.trainable,
+                weights_regularizer=None,
+                scope=name + '_pointwise')
 
         return output
 
     @layer
-    def convb(self, input, k_h, k_w, c_o, stride, name, relu=True, set_bias=True, set_tanh=False):
-        with slim.arg_scope([slim.batch_norm], decay=0.999, fused=common.batchnorm_fused, is_training=self.trainable):
-            output = slim.convolution2d(input, c_o, kernel_size=[k_h, k_w],
-                                        stride=stride,
-                                        normalizer_fn=slim.batch_norm,
-                                        weights_regularizer=_l2_regularizer_convb,
-                                        weights_initializer=_init_xavier,
-                                        # weights_initializer=tf.truncated_normal_initializer(stddev=0.01),
-                                        biases_initializer=_init_zero if set_bias else None,
-                                        trainable=self.trainable,
-                                        activation_fn=common.activation_fn if relu else None,
-                                        scope=name)
+    def convb(self,
+              input,
+              k_h,
+              k_w,
+              c_o,
+              stride,
+              name,
+              relu=True,
+              set_bias=True,
+              set_tanh=False):
+        with slim.arg_scope(
+            [slim.batch_norm],
+                decay=0.999,
+                fused=common.batchnorm_fused,
+                is_training=self.trainable):
+            output = slim.convolution2d(
+                input,
+                c_o,
+                kernel_size=[k_h, k_w],
+                stride=stride,
+                normalizer_fn=slim.batch_norm,
+                weights_regularizer=_l2_regularizer_convb,
+                weights_initializer=_init_xavier,
+                # weights_initializer=tf.truncated_normal_initializer(stddev=0.01),
+                biases_initializer=_init_zero if set_bias else None,
+                trainable=self.trainable,
+                activation_fn=common.activation_fn if relu else None,
+                scope=name)
             if set_tanh:
                 output = tf.nn.sigmoid(output, name=name + '_extra_acv')
         return output
@@ -242,7 +280,10 @@ class BaseNetwork(object):
         # Convolution for a given input and kernel
         convolve = lambda i, k: tf.nn.conv2d(i, k, [1, s_h, s_w, 1], padding=padding)
         with tf.variable_scope(name) as scope:
-            kernel = self.make_var('weights', shape=[k_h, k_w, c_i / group, c_o], trainable=self.trainable & trainable)
+            kernel = self.make_var(
+                'weights',
+                shape=[k_h, k_w, c_i / group, c_o],
+                trainable=self.trainable & trainable)
             if group == 1:
                 # This is the common-case. Convolve the input without any further complications.
                 output = convolve(input, kernel)
@@ -250,12 +291,15 @@ class BaseNetwork(object):
                 # Split the input into groups and then convolve each of them independently
                 input_groups = tf.split(3, group, input)
                 kernel_groups = tf.split(3, group, kernel)
-                output_groups = [convolve(i, k) for i, k in zip(input_groups, kernel_groups)]
+                output_groups = [
+                    convolve(i, k) for i, k in zip(input_groups, kernel_groups)
+                ]
                 # Concatenate the groups
                 output = tf.concat(3, output_groups)
             # Add the biases
             if biased:
-                biases = self.make_var('biases', [c_o], trainable=self.trainable & trainable)
+                biases = self.make_var(
+                    'biases', [c_o], trainable=self.trainable & trainable)
                 output = tf.nn.bias_add(output, biases)
 
             if relu:
@@ -268,31 +312,48 @@ class BaseNetwork(object):
         return tf.nn.relu(input, name=name)
 
     @layer
-    def max_pool(self, input, k_h, k_w, s_h, s_w, name, padding=DEFAULT_PADDING):
+    def max_pool(self,
+                 input,
+                 k_h,
+                 k_w,
+                 s_h,
+                 s_w,
+                 name,
+                 padding=DEFAULT_PADDING):
         self.validate_padding(padding)
-        return tf.nn.max_pool(input,
-                              ksize=[1, k_h, k_w, 1],
-                              strides=[1, s_h, s_w, 1],
-                              padding=padding,
-                              name=name)
+        return tf.nn.max_pool(
+            input,
+            ksize=[1, k_h, k_w, 1],
+            strides=[1, s_h, s_w, 1],
+            padding=padding,
+            name=name)
 
     @layer
-    def avg_pool(self, input, k_h, k_w, s_h, s_w, name, padding=DEFAULT_PADDING):
+    def avg_pool(self,
+                 input,
+                 k_h,
+                 k_w,
+                 s_h,
+                 s_w,
+                 name,
+                 padding=DEFAULT_PADDING):
         self.validate_padding(padding)
-        return tf.nn.avg_pool(input,
-                              ksize=[1, k_h, k_w, 1],
-                              strides=[1, s_h, s_w, 1],
-                              padding=padding,
-                              name=name)
+        return tf.nn.avg_pool(
+            input,
+            ksize=[1, k_h, k_w, 1],
+            strides=[1, s_h, s_w, 1],
+            padding=padding,
+            name=name)
 
     @layer
     def lrn(self, input, radius, alpha, beta, name, bias=1.0):
-        return tf.nn.local_response_normalization(input,
-                                                  depth_radius=radius,
-                                                  alpha=alpha,
-                                                  beta=beta,
-                                                  bias=bias,
-                                                  name=name)
+        return tf.nn.local_response_normalization(
+            input,
+            depth_radius=radius,
+            alpha=alpha,
+            beta=beta,
+            bias=bias,
+            name=name)
 
     @layer
     def concat(self, inputs, axis, name):

@@ -67,7 +67,7 @@ if __name__ == '__main__':
         '--model', default='personlab_resnet101', help='model name')
     parser.add_argument('--datapath', type=str, default='dataset/annotations/')
     parser.add_argument('--imgpath', type=str, default='dataset/')
-    parser.add_argument('--batchsize', type=int, default=16)
+    parser.add_argument('--batchsize', type=int, default=96)
     parser.add_argument('--gpus', type=int, default=1)
     parser.add_argument('--max-epoch', type=int, default=30)
     parser.add_argument('--lr', type=str, default='0.01')
