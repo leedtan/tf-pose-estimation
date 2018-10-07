@@ -29,14 +29,14 @@ logger.addHandler(ch)
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Training codes for Openpose using Tensorflow')
     parser.add_argument('--model', default='personlab_resnet101', help='model name')
-    parser.add_argument('--datapath', type=str, default='/data/public/rw/coco/annotations')
-    parser.add_argument('--imgpath', type=str, default='/data/public/rw/coco/')
-    parser.add_argument('--batchsize', type=int, default=96)
+    parser.add_argument('--datapath', type=str, default='dataset/annotations/')
+    parser.add_argument('--imgpath', type=str, default='dataset/')
+    parser.add_argument('--batchsize', type=int, default=8)
     parser.add_argument('--gpus', type=int, default=1)
     parser.add_argument('--max-epoch', type=int, default=30)
     parser.add_argument('--lr', type=str, default='0.01')
-    parser.add_argument('--modelpath', type=str, default='/data/private/tf-openpose-models-2018-2/')
-    parser.add_argument('--logpath', type=str, default='/data/private/tf-openpose-log-2018-2/')
+    parser.add_argument('--modelpath', type=str, default='models/cs3033/')
+    parser.add_argument('--logpath', type=str, default='logs/')
     parser.add_argument('--checkpoint', type=str, default='')
     parser.add_argument('--tag', type=str, default='')
     parser.add_argument('--remote-data', type=str, default='', help='eg. tcp://0.0.0.0:1027')
@@ -44,7 +44,10 @@ if __name__ == '__main__':
     parser.add_argument('--input-width', type=int, default=368)
     parser.add_argument('--input-height', type=int, default=368)
     args = parser.parse_args()
-
+    import os
+    for directory in [args.modelpath, args.logpath]:
+        if not os.path.exists(directory):
+            os.makedirs(directory)
     if args.gpus <= 0:
         raise Exception('gpus <= 0')
 
