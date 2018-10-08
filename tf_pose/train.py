@@ -11,7 +11,7 @@ import sys
 INIT_TIME = time.time()
 LASTTIME = time.time()
 import nn_utils
-
+import pdb
 import cv2
 import numpy as np
 import tensorflow as tf
@@ -22,7 +22,8 @@ from pose_dataset import get_dataflow_batch, DataFlowToQueue, CocoPose
 from pose_augment import set_network_input_wh, set_network_scale
 from common import get_sample_images
 from networks import get_network
-
+import os
+os.environ["CUDA_VISIBLE_DEVICES"]="0"
 
 def checktime(name=''):
   global LASTTIME
@@ -49,8 +50,6 @@ class UsefulLogger(object):
     self.log.flush()
 
 
-sys.stdout = UsefulLogger("logs/" + str(os.path.basename(sys.argv[0])) +
-                          str(time.time()) + ".txt")
 
 logger = logging.getLogger('train')
 logger.setLevel(logging.DEBUG)
@@ -65,8 +64,8 @@ if __name__ == '__main__':
   parser = argparse.ArgumentParser(
       description='Training codes for Openpose using Tensorflow')
   parser.add_argument('--model', default='mobilenet_thin', help='model name')
-  parser.add_argument('--datapath', type=str, default='dataset/annotations/')
-  parser.add_argument('--imgpath', type=str, default='dataset/')
+  parser.add_argument('--datapath', type=str, default='../dataset/annotations/')
+  parser.add_argument('--imgpath', type=str, default='../dataset/')
   parser.add_argument('--batchsize', type=int, default=16 * SHRINK * SHRINK)
   parser.add_argument('--gpus', type=int, default=1)
   parser.add_argument('--max-epoch', type=int, default=30)
@@ -81,10 +80,11 @@ if __name__ == '__main__':
   parser.add_argument('--input-width', type=int, default=368 // SHRINK)
   parser.add_argument('--input-height', type=int, default=368 // SHRINK)
   args = parser.parse_args()
-  import os
   for directory in [args.modelpath, args.logpath]:
     if not os.path.exists(directory):
       os.makedirs(directory)
+  sys.stdout = UsefulLogger("logs/" + str(os.path.basename(sys.argv[0])) +
+                          str(time.time()) + ".txt")
   if args.gpus <= 0:
     raise Exception('gpus <= 0')
 
