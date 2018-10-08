@@ -288,7 +288,6 @@ if __name__ == '__main__':
     checktime('starting optimization')
     while True:
       _, gs_num = sess.run([train_op, global_step])
-      #checktime('ran one optimization step')
       if gs_num > step_per_epoch * args.max_epoch:
         break
 
