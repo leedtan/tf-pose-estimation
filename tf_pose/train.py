@@ -59,7 +59,7 @@ formatter = logging.Formatter(
     '[%(asctime)s] [%(name)s] [%(levelname)s] %(message)s')
 ch.setFormatter(formatter)
 logger.addHandler(ch)
-SHRINK = 2
+SHRINK = 1
 if __name__ == '__main__':
   parser = argparse.ArgumentParser(
       description='Training codes for Openpose using Tensorflow')
@@ -243,7 +243,7 @@ if __name__ == '__main__':
   config = tf.ConfigProto(
       allow_soft_placement=True, log_device_placement=False)
   with tf.Session(config=config) as sess:
-    training_name = '{}_batch:{}_lr:{}_gpus:{}_{}x{}_{}'.format(
+    training_name = '{}_batch{}_lr{}_gpus{}_{}x{}_{}'.format(
         args.model, args.batchsize, args.lr, args.gpus, args.input_width,
         args.input_height, args.tag)
     logger.info('model weights initialization')

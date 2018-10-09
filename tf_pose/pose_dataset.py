@@ -364,13 +364,13 @@ def get_dataflow(path, is_train, img_path=None):
         #     ]), 0.7)
         # ]
         # ds = AugmentImageComponent(ds, augs)
-        ds = PrefetchData(ds, 1000, multiprocessing.cpu_count() * 4)
+        #ds = PrefetchData(ds, 1000, multiprocessing.cpu_count() * 4)
     else:
         ds = MultiThreadMapData(ds, nr_thread=16, map_func=read_image_url, buffer_size=1000)
         ds = MapDataComponent(ds, pose_resize_shortestedge_fixed)
         ds = MapDataComponent(ds, pose_crop_center)
         ds = MapData(ds, pose_to_img)
-        ds = PrefetchData(ds, 100, multiprocessing.cpu_count() // 4)
+        #ds = PrefetchData(ds, 100, multiprocessing.cpu_count() // 4)
 
     return ds
 
@@ -388,9 +388,9 @@ def get_dataflow_batch(path, is_train, batchsize, img_path=None):
     ds = get_dataflow(path, is_train, img_path=img_path)
     ds = BatchData(ds, batchsize)
     if is_train:
-        ds = PrefetchData(ds, 10, 2)
+        ds = ds#PrefetchData(ds, 10, 2)
     else:
-        ds = PrefetchData(ds, 50, 2)
+        ds = ds#PrefetchData(ds, 50, 2)
 
     return ds
 
