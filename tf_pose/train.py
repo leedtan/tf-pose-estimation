@@ -69,7 +69,7 @@ if __name__ == '__main__':
   parser.add_argument('--imgpath', type=str, default='../dataset/')
   parser.add_argument('--batchsize', type=int, default=16 * SHRINK * SHRINK)
   parser.add_argument('--gpus', type=int, default=1)
-  parser.add_argument('--max-epoch', type=int, default=1)
+  parser.add_argument('--max-epoch', type=int, default=30)
   parser.add_argument('--lr', type=str, default='0.01')
   parser.add_argument('--modelpath', type=str, default='models/cs3033/')
   parser.add_argument('--logpath', type=str, default='logs/')
@@ -333,7 +333,7 @@ if __name__ == '__main__':
 
         file_writer.add_summary(summary, gs_num)
 
-      if gs_num - last_gs_num2 >= 100:
+      if gs_num - last_gs_num2 >= 1000:
         # save weights
         directory = os.path.join(args.modelpath, training_name)
         if not os.path.exists(directory):
