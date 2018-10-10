@@ -3,7 +3,7 @@ from __future__ import absolute_import
 import tensorflow as tf
 
 from tf_pose import network_base
-
+HIDDEN_WIDTH = 256
 
 class MobilenetNetworkThin(network_base.BaseNetwork):
   def __init__(self, inputs, trainable=True, conv_width=1.0, conv_width2=None):
@@ -43,22 +43,22 @@ class MobilenetNetworkThin(network_base.BaseNetwork):
     with tf.variable_scope(None, 'Openpose'):
         prefix = 'MConv_Stage1'
         (self.feed(feature_lv)
-            .separable_conv(3, 3, depth2(128), 1, name=prefix + '_L1_1')
-            .sep_rconv(3, 3, depth2(128), 1, name=prefix + '_L1_2')
-            .sep_rconv(3, 3, depth2(128), 1, name=prefix + '_L1_3')
-            .sep_rconv(3, 3, depth2(128), 1, name=prefix + '_L1_4')
-            .sep_rconv(3, 3, depth2(128), 1, name=prefix + '_L1_5')
-            .separable_conv(1, 1, depth2(512), 1, name=prefix + '_L1_6')
-            .separable_conv(1, 1, 38, 1, relu=False, name=prefix + '_L1_7'))
+            .separable_conv(3, 3, depth2(HIDDEN_WIDTH), 1, name=prefix + '_L1_1')
+            .sep_rconv(3, 3, depth2(HIDDEN_WIDTH), 1, name=prefix + '_L1_2')
+            .sep_rconv(3, 3, depth2(HIDDEN_WIDTH), 1, name=prefix + '_L1_3')
+            .sep_rconv(3, 3, depth2(HIDDEN_WIDTH), 1, name=prefix + '_L1_4')
+            .sep_rconv(3, 3, depth2(HIDDEN_WIDTH), 1, name=prefix + '_L1_5')
+            .separable_conv(3, 3, depth2(512), 1, name=prefix + '_L1_6')
+            .separable_conv(3, 3, 38, 1, relu=False, name=prefix + '_L1_7'))
 
         (self.feed(feature_lv)
-            .separable_conv(3, 3, depth2(128), 1, name=prefix + '_L2_1')
-            .sep_rconv(3, 3, depth2(128), 1, name=prefix + '_L2_2')
-            .sep_rconv(3, 3, depth2(128), 1, name=prefix + '_L2_3')
-            .sep_rconv(3, 3, depth2(128), 1, name=prefix + '_L2_4')
-            .sep_rconv(3, 3, depth2(128), 1, name=prefix + '_L2_5')
-            .separable_conv(1, 1, depth2(512), 1, name=prefix + '_L2_6')
-            .separable_conv(1, 1, 19, 1, relu=False, name=prefix + '_L2_7'))
+            .separable_conv(3, 3, depth2(HIDDEN_WIDTH), 1, name=prefix + '_L2_1')
+            .sep_rconv(3, 3, depth2(HIDDEN_WIDTH), 1, name=prefix + '_L2_2')
+            .sep_rconv(3, 3, depth2(HIDDEN_WIDTH), 1, name=prefix + '_L2_3')
+            .sep_rconv(3, 3, depth2(HIDDEN_WIDTH), 1, name=prefix + '_L2_4')
+            .sep_rconv(3, 3, depth2(HIDDEN_WIDTH), 1, name=prefix + '_L2_5')
+            .separable_conv(3, 3, depth2(512), 1, name=prefix + '_L2_6')
+            .separable_conv(3, 3, 19, 1, relu=False, name=prefix + '_L2_7'))
 
         for stage_id in range(5):
             prefix_prev = 'MConv_Stage%d' % (stage_id + 1)
@@ -67,22 +67,22 @@ class MobilenetNetworkThin(network_base.BaseNetwork):
                         prefix_prev + '_L2_7',
                         feature_lv)
                 .concat(3, name=prefix + '_concat')
-                .separable_conv(3, 3, depth2(128), 1, name=prefix + '_L1_1')
-                .sep_rconv(3, 3, depth2(128), 1, name=prefix + '_L1_2')
-                .sep_rconv(3, 3, depth2(128), 1, name=prefix + '_L1_3')
-                .sep_rconv(3, 3, depth2(128), 1, name=prefix + '_L1_4')
-                .sep_rconv(3, 3, depth2(128), 1, name=prefix + '_L1_5')
-                .sep_rconv(1, 1, depth2(128), 1, name=prefix + '_L1_6')
-                .separable_conv(1, 1, 38, 1, relu=False, name=prefix + '_L1_7'))
+                .separable_conv(3, 3, depth2(HIDDEN_WIDTH), 1, name=prefix + '_L1_1')
+                .sep_rconv(3, 3, depth2(HIDDEN_WIDTH), 1, name=prefix + '_L1_2')
+                .sep_rconv(3, 3, depth2(HIDDEN_WIDTH), 1, name=prefix + '_L1_3')
+                .sep_rconv(3, 3, depth2(HIDDEN_WIDTH), 1, name=prefix + '_L1_4')
+                .sep_rconv(3, 3, depth2(HIDDEN_WIDTH), 1, name=prefix + '_L1_5')
+                .sep_rconv(3, 3, depth2(HIDDEN_WIDTH), 1, name=prefix + '_L1_6')
+                .separable_conv(3, 3, 38, 1, relu=False, name=prefix + '_L1_7'))
 
             (self.feed(prefix + '_concat')
-                .separable_conv(3, 3, depth2(128), 1, name=prefix + '_L2_1')
-                .sep_rconv(3, 3, depth2(128), 1, name=prefix + '_L2_2')
-                .sep_rconv(3, 3, depth2(128), 1, name=prefix + '_L2_3')
-                .sep_rconv(3, 3, depth2(128), 1, name=prefix + '_L2_4')
-                .sep_rconv(3, 3, depth2(128), 1, name=prefix + '_L2_5')
-                .sep_rconv(1, 1, depth2(128), 1, name=prefix + '_L2_6')
-                .separable_conv(1, 1, 19, 1, relu=False, name=prefix + '_L2_7'))
+                .separable_conv(3, 3, depth2(HIDDEN_WIDTH), 1, name=prefix + '_L2_1')
+                .sep_rconv(3, 3, depth2(HIDDEN_WIDTH), 1, name=prefix + '_L2_2')
+                .sep_rconv(3, 3, depth2(HIDDEN_WIDTH), 1, name=prefix + '_L2_3')
+                .sep_rconv(3, 3, depth2(HIDDEN_WIDTH), 1, name=prefix + '_L2_4')
+                .sep_rconv(3, 3, depth2(HIDDEN_WIDTH), 1, name=prefix + '_L2_5')
+                .sep_rconv(3, 3, depth2(HIDDEN_WIDTH), 1, name=prefix + '_L2_6')
+                .separable_conv(3, 3, 19, 1, relu=False, name=prefix + '_L2_7'))
 
         # final result
         (self.feed('MConv_Stage6_L2_5',

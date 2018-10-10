@@ -187,7 +187,7 @@ class BaseNetwork(object):
                      set_bias=True):
     with slim.arg_scope(
         [slim.batch_norm],
-        decay=0.999,
+        decay=0.99,
         fused=common.batchnorm_fused,
         is_training=self.trainable):
       output = slim.separable_convolution2d(
@@ -232,10 +232,11 @@ class BaseNetwork(object):
                 stride,
                 name,
                 relu=True,
+                residual=True,
                 set_bias=True):
     with slim.arg_scope(
         [slim.batch_norm],
-        decay=0.999,
+        decay=0.99,
         fused=common.batchnorm_fused,
         is_training=self.trainable):
       output = slim.separable_convolution2d(
@@ -254,7 +255,6 @@ class BaseNetwork(object):
           biases_initializer=None,
           padding=DEFAULT_PADDING,
           scope=name + '_depthwise')
-
       output = slim.convolution2d(
           output,
           c_o,
@@ -268,7 +268,8 @@ class BaseNetwork(object):
           trainable=self.trainable,
           weights_regularizer=None,
           scope=name + '_pointwise')
-      output = output + inpt
+      if residual:
+        output = output + inpt
       if relu:
         output = tf.nn.leaky_relu(output)
 
