@@ -51,6 +51,7 @@ class UsefulLogger(object):
 
 
 
+training_name = 'fixed_sep'
 logger = logging.getLogger('train')
 logger.setLevel(logging.DEBUG)
 ch = logging.StreamHandler()
@@ -243,10 +244,9 @@ if __name__ == '__main__':
   config = tf.ConfigProto(
       allow_soft_placement=True, log_device_placement=False)
   with tf.Session(config=config) as sess:
-    training_name = '{}_batch{}_lr{}_gpus{}_{}x{}_{}'.format(
-        args.model, args.batchsize, args.lr, args.gpus, args.input_width,
-        args.input_height, args.tag)
-    training_name = 'fixed_sep'
+    # training_name = '{}_batch{}_lr{}_gpus{}_{}x{}_{}'.format(
+    #     args.model, args.batchsize, args.lr, args.gpus, args.input_width,
+    #     args.input_height, args.tag)
     logger.info('model weights initialization')
     checktime('about to initialize')
     sess.run(tf.global_variables_initializer())
@@ -335,6 +335,9 @@ if __name__ == '__main__':
 
       if gs_num - last_gs_num2 >= 100:
         # save weights
+        directory = os.path.join(args.modelpath, training_name)
+        if not os.path.exists(directory):
+          os.makedirs(directory)
         saver.save(
             sess,
             os.path.join(args.modelpath, training_name, 'model'),
