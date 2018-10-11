@@ -23,7 +23,7 @@ from pose_augment import set_network_input_wh, set_network_scale
 from common import get_sample_images
 from networks import get_network
 import os
-os.environ["CUDA_VISIBLE_DEVICES"]="0"
+os.environ["CUDA_VISIBLE_DEVICES"]="2"
 
 def checktime(name=''):
   global LASTTIME
@@ -51,7 +51,7 @@ class UsefulLogger(object):
 
 
 
-training_name = 'fixed_sep'
+training_name = 'learning_rate_fixed'
 logger = logging.getLogger('train')
 logger.setLevel(logging.DEBUG)
 ch = logging.StreamHandler()
@@ -88,6 +88,7 @@ if __name__ == '__main__':
                           str(time.time()) + ".txt")
   if args.gpus <= 0:
     raise Exception('gpus <= 0')
+  print(args)
 
   # define input placeholder
   set_network_input_wh(args.input_width, args.input_height)
@@ -192,20 +193,22 @@ if __name__ == '__main__':
     # define optimizer
     step_per_epoch = 121745 // args.batchsize
     global_step = tf.Variable(0, trainable=False)
-    if ',' not in args.lr:
-      starter_learning_rate = float(args.lr)
-      learning_rate = tf.train.exponential_decay(
-          starter_learning_rate,
-          global_step,
-          decay_steps=10000,
-          decay_rate=0.33,
-          staircase=True)
-    else:
-      lrs = [float(x) for x in args.lr.split(',')]
-      boundaries = [
-          step_per_epoch * 5 * i for i, _ in range(len(lrs)) if i > 0
-      ]
-      learning_rate = tf.train.piecewise_constant(global_step, boundaries, lrs)
+    learning_rate = tf.placeholder(tf.float32, None)
+    # if ',' not in args.lr:
+    #   starter_learning_rate = float(args.lr)
+    #   learning_rate = tf.train.exponential_decay(
+    #       starter_learning_rate,
+    #       global_step,
+    #       decay_steps=10000,
+    #       decay_rate=0.33,
+    #       staircase=False)
+    # else:
+    #   raise ValueError('Accidentally used weird learning rate code')
+    #   lrs = [float(x) for x in args.lr.split(',')]
+    #   boundaries = [
+    #       step_per_epoch * 5 * i for i, _ in range(len(lrs)) if i > 0
+    #   ]
+    #   learning_rate = tf.train.piecewise_constant(global_step, boundaries, lrs)
 
   # optimizer = tf.train.RMSPropOptimizer(learning_rate, decay=0.0005, momentum=0.9, epsilon=1e-10)
   opt = tf.train.AdamOptimizer(learning_rate, epsilon=1e-8)
@@ -240,7 +243,7 @@ if __name__ == '__main__':
   merged_validate_op = tf.summary.merge(
       [train_img, valid_img, valid_loss_t, valid_loss_ll_t])
 
-  saver = tf.train.Saver(max_to_keep=100)
+  saver = tf.train.Saver(max_to_keep=1000)
   config = tf.ConfigProto(
       allow_soft_placement=True, log_device_placement=False)
   with tf.Session(config=config) as sess:
@@ -285,18 +288,19 @@ if __name__ == '__main__':
     time_started = time.time()
     last_gs_num = last_gs_num2 = 0
     initial_gs_num = sess.run(global_step)
-
+    gs_num = 0
     checktime('starting optimization')
     while True:
-      _, gs_num = sess.run([train_op, global_step])
+      current_lr = .1/np.sqrt(gs_num + 10)
+      _, gs_num = sess.run([train_op, global_step], {learning_rate: current_lr})
       if gs_num > step_per_epoch * args.max_epoch:
         break
 
       if gs_num == 2:
-        train_loss, train_loss_ll, train_loss_ll_paf, train_loss_ll_heat, lr_val, summary, queue_size = sess.run(
+        train_loss, train_loss_ll, train_loss_ll_paf, train_loss_ll_heat, summary, queue_size = sess.run(
             [
                 total_loss, total_loss_ll, total_loss_ll_paf,
-                total_loss_ll_heat, learning_rate, merged_summary_op,
+                total_loss_ll_heat, merged_summary_op,
                 enqueuer.size()
             ])
         checktime('2 optimizations')
@@ -305,17 +309,17 @@ if __name__ == '__main__':
         logger.info(
             'epoch=%.2f step=%d, %0.4f examples/sec lr=%f, loss=%g, loss_ll=%g, loss_ll_paf=%g, loss_ll_heat=%g, q=%d'
             % (gs_num / step_per_epoch, gs_num, batch_per_sec * args.batchsize,
-               lr_val, train_loss, train_loss_ll, train_loss_ll_paf,
+               current_lr, train_loss, train_loss_ll, train_loss_ll_paf,
                train_loss_ll_heat, queue_size))
         last_gs_num = gs_num
 
         file_writer.add_summary(summary, gs_num)
 
       if gs_num - last_gs_num >= 10:
-        train_loss, train_loss_ll, train_loss_ll_paf, train_loss_ll_heat, lr_val, summary, queue_size = sess.run(
+        train_loss, train_loss_ll, train_loss_ll_paf, train_loss_ll_heat, summary, queue_size = sess.run(
             [
                 total_loss, total_loss_ll, total_loss_ll_paf,
-                total_loss_ll_heat, learning_rate, merged_summary_op,
+                total_loss_ll_heat, merged_summary_op,
                 enqueuer.size()
             ])
         if gs_num < 15:
@@ -327,7 +331,7 @@ if __name__ == '__main__':
         logger.info(
             'epoch=%.2f step=%d, %0.4f examples/sec lr=%f, loss=%g, loss_ll=%g, loss_ll_paf=%g, loss_ll_heat=%g, q=%d'
             % (gs_num / step_per_epoch, gs_num, batch_per_sec * args.batchsize,
-               lr_val, train_loss, train_loss_ll, train_loss_ll_paf,
+               current_lr, train_loss, train_loss_ll, train_loss_ll_paf,
                train_loss_ll_heat, queue_size))
         last_gs_num = gs_num
 
