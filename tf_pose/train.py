@@ -23,7 +23,7 @@ from pose_augment import set_network_input_wh, set_network_scale
 from common import get_sample_images
 from networks import get_network
 import os
-os.environ["CUDA_VISIBLE_DEVICES"]="2"
+os.environ["CUDA_VISIBLE_DEVICES"]="3"
 
 def checktime(name=''):
   global LASTTIME
@@ -51,7 +51,7 @@ class UsefulLogger(object):
 
 
 
-training_name = 'learning_rate_fixed'
+training_name = 'meaningful_tensorboarding'
 logger = logging.getLogger('train')
 logger.setLevel(logging.DEBUG)
 ch = logging.StreamHandler()
@@ -189,39 +189,21 @@ if __name__ == '__main__':
     total_loss_ll_paf = tf.reduce_mean(last_losses_l1)
     total_loss_ll_heat = tf.reduce_mean(last_losses_l2)
     total_loss_ll = tf.reduce_mean([total_loss_ll_paf, total_loss_ll_heat])
-
     # define optimizer
     step_per_epoch = 121745 // args.batchsize
     global_step = tf.Variable(0, trainable=False)
     learning_rate = tf.placeholder(tf.float32, None)
-    # if ',' not in args.lr:
-    #   starter_learning_rate = float(args.lr)
-    #   learning_rate = tf.train.exponential_decay(
-    #       starter_learning_rate,
-    #       global_step,
-    #       decay_steps=10000,
-    #       decay_rate=0.33,
-    #       staircase=False)
-    # else:
-    #   raise ValueError('Accidentally used weird learning rate code')
-    #   lrs = [float(x) for x in args.lr.split(',')]
-    #   boundaries = [
-    #       step_per_epoch * 5 * i for i, _ in range(len(lrs)) if i > 0
-    #   ]
-    #   learning_rate = tf.train.piecewise_constant(global_step, boundaries, lrs)
-
-  # optimizer = tf.train.RMSPropOptimizer(learning_rate, decay=0.0005, momentum=0.9, epsilon=1e-10)
   opt = tf.train.AdamOptimizer(learning_rate, epsilon=1e-8)
   update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
   with tf.control_dependencies(update_ops):
     checktime('about to define optimizer')
     train_op, grad_norm = nn_utils.apply_clipped_optimizer_pose(
         opt, total_loss, global_step=global_step)
-    # train_op = optimizer.minimize(
-    #     total_loss, global_step, colocate_gradients_with_ops=True)
     checktime('defined optimizer')
   logger.info('define model-')
 
+  grad_norm_loss, grad_norm_loss_paf, grad_norm_loss_heat = [
+    nn_utils.get_grad_norm(opt, l) for l in [total_loss, total_loss_ll_paf, total_loss_ll_heat]]
   # define summary
   tf.summary.scalar("loss", total_loss)
   tf.summary.scalar("loss_lastlayer", total_loss_ll)
@@ -297,7 +279,8 @@ if __name__ == '__main__':
         break
 
       if gs_num == 2:
-        train_loss, train_loss_ll, train_loss_ll_paf, train_loss_ll_heat, summary, queue_size = sess.run(
+        train_loss, train_loss_ll, train_loss_ll_paf, \
+          train_loss_ll_heat, summary, queue_size = sess.run(
             [
                 total_loss, total_loss_ll, total_loss_ll_paf,
                 total_loss_ll_heat, merged_summary_op,
@@ -334,7 +317,20 @@ if __name__ == '__main__':
                current_lr, train_loss, train_loss_ll, train_loss_ll_paf,
                train_loss_ll_heat, queue_size))
         last_gs_num = gs_num
-
+        cur_grad, cur_grad_loss, cur_grad_paf, cur_grad_heat = sess.run(
+          [grad_norm, grad_norm_loss, grad_norm_loss_paf, grad_norm_loss_heat])
+        file_writer.add_summary(
+          tf.Summary(value=[tf.Summary.Value(tag='Grad Norm Total', simple_value=cur_grad)]),
+          gs_num)
+        file_writer.add_summary(
+          tf.Summary(value=[tf.Summary.Value(tag='Grad Norm Loss', simple_value=cur_grad_loss)]),
+          gs_num)
+        file_writer.add_summary(
+          tf.Summary(value=[tf.Summary.Value(tag='Grad Norm PAF', simple_value=cur_grad_paf)]),
+          gs_num)
+        file_writer.add_summary(
+          tf.Summary(value=[tf.Summary.Value(tag='Grad Norm Heat', simple_value=cur_grad_heat)]),
+          gs_num)
         file_writer.add_summary(summary, gs_num)
 
       if gs_num - last_gs_num2 >= 1000:
