@@ -4,7 +4,8 @@ import tensorflow as tf
 
 from tf_pose import network_base
 HIDDEN_WIDTH = 256
-
+CORE = sep_rconv
+#CORE = separable_conv
 class MobilenetNetworkThin(network_base.BaseNetwork):
   def __init__(self, inputs, trainable=True, conv_width=1.0, conv_width2=None):
     self.conv_width = conv_width
@@ -44,20 +45,20 @@ class MobilenetNetworkThin(network_base.BaseNetwork):
         prefix = 'MConv_Stage1'
         (self.feed(feature_lv)
             .separable_conv(3, 3, HIDDEN_WIDTH, 1, name=prefix + '_L1_1')
-            .sep_rconv(3, 3, HIDDEN_WIDTH, 1, name=prefix + '_L1_2')
-            .sep_rconv(3, 3, HIDDEN_WIDTH, 1, name=prefix + '_L1_3')
-            .sep_rconv(3, 3, HIDDEN_WIDTH, 1, name=prefix + '_L1_4')
-            .sep_rconv(3, 3, HIDDEN_WIDTH, 1, name=prefix + '_L1_5')
-            .sep_rconv(3, 3, HIDDEN_WIDTH, 1, name=prefix + '_L1_6')
+            .CORE(3, 3, HIDDEN_WIDTH, 1, name=prefix + '_L1_2')
+            .CORE(3, 3, HIDDEN_WIDTH, 1, name=prefix + '_L1_3')
+            .CORE(3, 3, HIDDEN_WIDTH, 1, name=prefix + '_L1_4')
+            .CORE(3, 3, HIDDEN_WIDTH, 1, name=prefix + '_L1_5')
+            .CORE(3, 3, HIDDEN_WIDTH, 1, name=prefix + '_L1_6')
             .separable_conv(3, 3, 38, 1, relu=False, name=prefix + '_L1_7'))
 
         (self.feed(feature_lv)
             .separable_conv(3, 3, HIDDEN_WIDTH, 1, name=prefix + '_L2_1')
-            .sep_rconv(3, 3, HIDDEN_WIDTH, 1, name=prefix + '_L2_2')
-            .sep_rconv(3, 3, HIDDEN_WIDTH, 1, name=prefix + '_L2_3')
-            .sep_rconv(3, 3, HIDDEN_WIDTH, 1, name=prefix + '_L2_4')
-            .sep_rconv(3, 3, HIDDEN_WIDTH, 1, name=prefix + '_L2_5')
-            .sep_rconv(3, 3, HIDDEN_WIDTH, 1, name=prefix + '_L2_6')
+            .CORE(3, 3, HIDDEN_WIDTH, 1, name=prefix + '_L2_2')
+            .CORE(3, 3, HIDDEN_WIDTH, 1, name=prefix + '_L2_3')
+            .CORE(3, 3, HIDDEN_WIDTH, 1, name=prefix + '_L2_4')
+            .CORE(3, 3, HIDDEN_WIDTH, 1, name=prefix + '_L2_5')
+            .CORE(3, 3, HIDDEN_WIDTH, 1, name=prefix + '_L2_6')
             .separable_conv(3, 3, 19, 1, relu=False, name=prefix + '_L2_7'))
 
         for stage_id in range(5):
@@ -68,20 +69,20 @@ class MobilenetNetworkThin(network_base.BaseNetwork):
                         feature_lv)
                 .concat(3, name=prefix + '_concat')
                 .separable_conv(3, 3, HIDDEN_WIDTH, 1, name=prefix + '_L1_1')
-                .sep_rconv(3, 3, HIDDEN_WIDTH, 1, name=prefix + '_L1_2')
-                .sep_rconv(3, 3, HIDDEN_WIDTH, 1, name=prefix + '_L1_3')
-                .sep_rconv(3, 3, HIDDEN_WIDTH, 1, name=prefix + '_L1_4')
-                .sep_rconv(3, 3, HIDDEN_WIDTH, 1, name=prefix + '_L1_5')
-                .sep_rconv(3, 3, HIDDEN_WIDTH, 1, name=prefix + '_L1_6')
+                .CORE(3, 3, HIDDEN_WIDTH, 1, name=prefix + '_L1_2')
+                .CORE(3, 3, HIDDEN_WIDTH, 1, name=prefix + '_L1_3')
+                .CORE(3, 3, HIDDEN_WIDTH, 1, name=prefix + '_L1_4')
+                .CORE(3, 3, HIDDEN_WIDTH, 1, name=prefix + '_L1_5')
+                .CORE(3, 3, HIDDEN_WIDTH, 1, name=prefix + '_L1_6')
                 .separable_conv(3, 3, 38, 1, relu=False, name=prefix + '_L1_7'))
 
             (self.feed(prefix + '_concat')
                 .separable_conv(3, 3, HIDDEN_WIDTH, 1, name=prefix + '_L2_1')
-                .sep_rconv(3, 3, HIDDEN_WIDTH, 1, name=prefix + '_L2_2')
-                .sep_rconv(3, 3, HIDDEN_WIDTH, 1, name=prefix + '_L2_3')
-                .sep_rconv(3, 3, HIDDEN_WIDTH, 1, name=prefix + '_L2_4')
-                .sep_rconv(3, 3, HIDDEN_WIDTH, 1, name=prefix + '_L2_5')
-                .sep_rconv(3, 3, HIDDEN_WIDTH, 1, name=prefix + '_L2_6')
+                .CORE(3, 3, HIDDEN_WIDTH, 1, name=prefix + '_L2_2')
+                .CORE(3, 3, HIDDEN_WIDTH, 1, name=prefix + '_L2_3')
+                .CORE(3, 3, HIDDEN_WIDTH, 1, name=prefix + '_L2_4')
+                .CORE(3, 3, HIDDEN_WIDTH, 1, name=prefix + '_L2_5')
+                .CORE(3, 3, HIDDEN_WIDTH, 1, name=prefix + '_L2_6')
                 .separable_conv(3, 3, 19, 1, relu=False, name=prefix + '_L2_7'))
 
         # final result

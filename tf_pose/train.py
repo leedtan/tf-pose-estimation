@@ -23,7 +23,7 @@ from pose_augment import set_network_input_wh, set_network_scale
 from common import get_sample_images
 from networks import get_network
 import os
-os.environ["CUDA_VISIBLE_DEVICES"]="3"
+os.environ["CUDA_VISIBLE_DEVICES"]="0"
 
 def checktime(name=''):
   global LASTTIME
@@ -51,7 +51,6 @@ class UsefulLogger(object):
 
 
 
-training_name = 'meaningful_tensorboarding'
 logger = logging.getLogger('train')
 logger.setLevel(logging.DEBUG)
 ch = logging.StreamHandler()
@@ -66,6 +65,7 @@ if __name__ == '__main__':
       description='Training codes for Openpose using Tensorflow')
   parser.add_argument('--model', default='mobilenet_thin', help='model name')
   parser.add_argument('--datapath', type=str, default='../dataset/annotations/')
+  parser.add_argument('--training_name', type=str, default='default_name')
   parser.add_argument('--imgpath', type=str, default='../dataset/')
   parser.add_argument('--batchsize', type=int, default=16 * SHRINK * SHRINK)
   parser.add_argument('--gpus', type=int, default=1)
@@ -89,6 +89,7 @@ if __name__ == '__main__':
   if args.gpus <= 0:
     raise Exception('gpus <= 0')
   print(args)
+  training_name = args.training_name
 
   # define input placeholder
   set_network_input_wh(args.input_width, args.input_height)
@@ -125,7 +126,11 @@ if __name__ == '__main__':
           args.datapath, True, args.batchsize, img_path=args.imgpath)
     else:
       # transfer inputs from ZMQ
+      raise ValueError('tried to use remote data?')
       df = RemoteDataZMQ(args.remote_data, hwm=3)
+    
+    # for dp in self.df.get_data():
+    #     feed = dict(zip(self.placeholders, dp))
     enqueuer = DataFlowToQueue(
         df, [input_node, heatmap_node, vectmap_node], queue_size=100)
     q_inp, q_heat, q_vect = enqueuer.dequeue()
@@ -298,15 +303,15 @@ if __name__ == '__main__':
 
         file_writer.add_summary(summary, gs_num)
 
-      if gs_num - last_gs_num >= 10:
+      if gs_num - last_gs_num >= 10 or (gs_num == 5):
         train_loss, train_loss_ll, train_loss_ll_paf, train_loss_ll_heat, summary, queue_size = sess.run(
             [
                 total_loss, total_loss_ll, total_loss_ll_paf,
                 total_loss_ll_heat, merged_summary_op,
                 enqueuer.size()
             ])
-        if gs_num < 15:
-          checktime('10 optimizations')
+        if gs_num < 10:
+          checktime('5 optimizations')
 
         # log of training loss / accuracy
         batch_per_sec = (gs_num - initial_gs_num) / (
