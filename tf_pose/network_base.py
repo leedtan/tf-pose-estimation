@@ -224,6 +224,102 @@ class BaseNetwork(object):
     return output
 
   @layer
+  def rconv(self,
+                inpt,
+                k_h,
+                k_w,
+                c_o,
+                stride,
+                name,
+                relu=True,
+                residual=True,
+                set_bias=True):
+    with slim.arg_scope(
+        [slim.batch_norm],
+        decay=0.99,
+        fused=common.batchnorm_fused,
+        is_training=self.trainable):
+      output = slim.convolution2d(
+          inpt,
+          c_o,
+          stride=1,
+          kernel_size=[k_h, k_w],
+          activation_fn=None,
+          weights_initializer=_init_xavier,
+          # weights_initializer=_init_norm,
+          biases_initializer=_init_zero if set_bias else None,
+          normalizer_fn=slim.batch_norm,
+          trainable=self.trainable,
+          weights_regularizer=None,
+          scope=name + '_pointwise')
+      if residual:
+        output = output + inpt
+      if relu:
+        output = tf.nn.leaky_relu(output)
+
+    return output
+  @layer
+  def rconv_bottleneck(self,
+                inpt,
+                k_h,
+                k_w,
+                c_o,
+                stride,
+                name,
+                relu=True,
+                residual=True,
+                set_bias=True):
+    with slim.arg_scope(
+        [slim.batch_norm],
+        decay=0.99,
+        fused=common.batchnorm_fused,
+        is_training=self.trainable):
+      output = slim.convolution2d(
+          inpt,
+          c_o,
+          stride=2,
+          kernel_size=[k_h, k_w],
+          activation_fn=None,
+          weights_initializer=_init_xavier,
+          # weights_initializer=_init_norm,
+          biases_initializer=_init_zero if set_bias else None,
+          normalizer_fn=slim.batch_norm,
+          trainable=self.trainable,
+          weights_regularizer=None,
+          scope=name + '_pointwise')
+      output = slim.convolution2d(
+          inpt,
+          c_o,
+          stride=1,
+          kernel_size=[1, 1],
+          activation_fn=None,
+          weights_initializer=_init_xavier,
+          # weights_initializer=_init_norm,
+          biases_initializer=_init_zero if set_bias else None,
+          normalizer_fn=slim.batch_norm,
+          trainable=self.trainable,
+          weights_regularizer=None,
+          scope=name + '_pointwise')
+      output = slim.convolution2d_transpose(
+          output,
+          c_o,
+          stride=2,
+          kernel_size=[k_h, k_w],
+          activation_fn=None,
+          weights_initializer=_init_xavier,
+          # weights_initializer=_init_norm,
+          biases_initializer=_init_zero if set_bias else None,
+          normalizer_fn=slim.batch_norm,
+          trainable=self.trainable,
+          weights_regularizer=None,
+          scope=name + '_pointwise')
+      if residual:
+        output = output + inpt
+      if relu:
+        output = tf.nn.leaky_relu(output)
+
+    return output
+  @layer
   def sep_rconv(self,
                 inpt,
                 k_h,

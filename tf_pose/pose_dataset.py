@@ -289,8 +289,11 @@ class CocoPose(RNGDataFlow):
             pass
 
         keys = list(self.coco.imgs.keys())
-        for idx in idxs:
+        for bnum in range(1000000):
+          for idx in range(16):
+        #for idx in idxs:
             img_meta = self.coco.imgs[keys[idx]]
+            #print(img_meta)
             img_idx = img_meta['id']
             ann_idx = self.coco.getAnnIds(imgIds=img_idx)
 

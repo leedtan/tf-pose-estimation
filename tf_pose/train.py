@@ -8,6 +8,8 @@ import logging
 import os
 import time
 import sys
+src_path = os.path.join(os.getcwd(), 'tf_pose' )
+sys.path.append(src_path)
 INIT_TIME = time.time()
 LASTTIME = time.time()
 import nn_utils
@@ -23,7 +25,6 @@ from pose_augment import set_network_input_wh, set_network_scale
 from common import get_sample_images
 from networks import get_network
 import os
-os.environ["CUDA_VISIBLE_DEVICES"]="0"
 
 def checktime(name=''):
   global LASTTIME
@@ -70,7 +71,8 @@ if __name__ == '__main__':
   parser.add_argument('--batchsize', type=int, default=16 * SHRINK * SHRINK)
   parser.add_argument('--gpus', type=int, default=1)
   parser.add_argument('--max-epoch', type=int, default=30)
-  parser.add_argument('--lr', type=str, default='0.01')
+  parser.add_argument('--gpu_num', type=int, default=0)
+  parser.add_argument('--lr', type=float, default=0.03)
   parser.add_argument('--modelpath', type=str, default='models/cs3033/')
   parser.add_argument('--logpath', type=str, default='logs/')
   parser.add_argument('--checkpoint', type=str, default='')
@@ -81,6 +83,7 @@ if __name__ == '__main__':
   parser.add_argument('--input-width', type=int, default=368 // SHRINK)
   parser.add_argument('--input-height', type=int, default=368 // SHRINK)
   args = parser.parse_args()
+  os.environ["CUDA_VISIBLE_DEVICES"]=str(args.gpu_num)
   for directory in [args.modelpath, args.logpath]:
     if not os.path.exists(directory):
       os.makedirs(directory)
@@ -129,8 +132,9 @@ if __name__ == '__main__':
       raise ValueError('tried to use remote data?')
       df = RemoteDataZMQ(args.remote_data, hwm=3)
     
-    # for dp in self.df.get_data():
-    #     feed = dict(zip(self.placeholders, dp))
+    # for dp in df.get_data():
+    #   a = dp
+    #    feed = dict(zip([input_node, heatmap_node, vectmap_node], dp))
     enqueuer = DataFlowToQueue(
         df, [input_node, heatmap_node, vectmap_node], queue_size=100)
     q_inp, q_heat, q_vect = enqueuer.dequeue()
@@ -278,7 +282,7 @@ if __name__ == '__main__':
     gs_num = 0
     checktime('starting optimization')
     while True:
-      current_lr = .1/np.sqrt(gs_num + 10)
+      current_lr = args.lr/np.sqrt(gs_num + 10)
       _, gs_num = sess.run([train_op, global_step], {learning_rate: current_lr})
       if gs_num > step_per_epoch * args.max_epoch:
         break

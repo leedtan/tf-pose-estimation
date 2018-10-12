@@ -4,8 +4,7 @@ import tensorflow as tf
 
 from tf_pose import network_base
 HIDDEN_WIDTH = 256
-CORE = sep_rconv
-#CORE = separable_conv
+STAGES = 5
 class MobilenetNetworkThin(network_base.BaseNetwork):
   def __init__(self, inputs, trainable=True, conv_width=1.0, conv_width2=None):
     self.conv_width = conv_width
@@ -41,68 +40,54 @@ class MobilenetNetworkThin(network_base.BaseNetwork):
         .concat(3, name='feat_concat'))
 
     feature_lv = 'feat_concat'
+    prefix = 'MConv_Stage1'
+    cur_list = [feature_lv]
     with tf.variable_scope(None, 'Openpose'):
-        prefix = 'MConv_Stage1'
-        (self.feed(feature_lv)
-            .separable_conv(3, 3, HIDDEN_WIDTH, 1, name=prefix + '_L1_1')
-            .CORE(3, 3, HIDDEN_WIDTH, 1, name=prefix + '_L1_2')
-            .CORE(3, 3, HIDDEN_WIDTH, 1, name=prefix + '_L1_3')
-            .CORE(3, 3, HIDDEN_WIDTH, 1, name=prefix + '_L1_4')
-            .CORE(3, 3, HIDDEN_WIDTH, 1, name=prefix + '_L1_5')
-            .CORE(3, 3, HIDDEN_WIDTH, 1, name=prefix + '_L1_6')
-            .separable_conv(3, 3, 38, 1, relu=False, name=prefix + '_L1_7'))
+        
+      for stage_id in range(STAGES):
+        # prefix_prev = 'MConv_Stage%d' % (stage_id + 1)
+        prefix = 'MConv_Stage%d' % (stage_id + 1)
+        # cur_list = [feature_lv]
+        (self.feed(*cur_list)
+          .concat(3, name=prefix + '_concat')
+          .separable_conv(3, 3, HIDDEN_WIDTH, 1, name=prefix + '_L1_1')
+          .rconv_bottleneck(3, 3, HIDDEN_WIDTH, 1, name=prefix + '_L1_2')
+          # .rconv_bottleneck(3, 3, HIDDEN_WIDTH, 1, name=prefix + '_L1_3')
+          # .rconv_bottleneck(3, 3, HIDDEN_WIDTH, 1, name=prefix + '_L1_4')
+          # .rconv_bottleneck(3, 3, HIDDEN_WIDTH, 1, name=prefix + '_L1_5')
+          .rconv_bottleneck(3, 3, HIDDEN_WIDTH, 1, name=prefix + '_L1_6')
+          .separable_conv(3, 3, 38, 1, relu=False, name=prefix + '_L1_7'))
 
-        (self.feed(feature_lv)
-            .separable_conv(3, 3, HIDDEN_WIDTH, 1, name=prefix + '_L2_1')
-            .CORE(3, 3, HIDDEN_WIDTH, 1, name=prefix + '_L2_2')
-            .CORE(3, 3, HIDDEN_WIDTH, 1, name=prefix + '_L2_3')
-            .CORE(3, 3, HIDDEN_WIDTH, 1, name=prefix + '_L2_4')
-            .CORE(3, 3, HIDDEN_WIDTH, 1, name=prefix + '_L2_5')
-            .CORE(3, 3, HIDDEN_WIDTH, 1, name=prefix + '_L2_6')
-            .separable_conv(3, 3, 19, 1, relu=False, name=prefix + '_L2_7'))
+        (self.feed(prefix + '_concat')
+          .separable_conv(3, 3, HIDDEN_WIDTH, 1, name=prefix + '_L2_1')
+          .rconv_bottleneck(3, 3, HIDDEN_WIDTH, 1, name=prefix + '_L2_2')
+          # .rconv_bottleneck(3, 3, HIDDEN_WIDTH, 1, name=prefix + '_L2_3')
+          # .rconv_bottleneck(3, 3, HIDDEN_WIDTH, 1, name=prefix + '_L2_4')
+          # .rconv_bottleneck(3, 3, HIDDEN_WIDTH, 1, name=prefix + '_L2_5')
+          .rconv_bottleneck(3, 3, HIDDEN_WIDTH, 1, name=prefix + '_L2_6')
+          .separable_conv(3, 3, 19, 1, relu=False, name=prefix + '_L2_7'))
+        cur_list.append(prefix + '_L1_7')
+        cur_list.append(prefix + '_L2_7')
 
-        for stage_id in range(5):
-            prefix_prev = 'MConv_Stage%d' % (stage_id + 1)
-            prefix = 'MConv_Stage%d' % (stage_id + 2)
-            (self.feed(prefix_prev + '_L1_7',
-                        prefix_prev + '_L2_7',
-                        feature_lv)
-                .concat(3, name=prefix + '_concat')
-                .separable_conv(3, 3, HIDDEN_WIDTH, 1, name=prefix + '_L1_1')
-                .CORE(3, 3, HIDDEN_WIDTH, 1, name=prefix + '_L1_2')
-                .CORE(3, 3, HIDDEN_WIDTH, 1, name=prefix + '_L1_3')
-                .CORE(3, 3, HIDDEN_WIDTH, 1, name=prefix + '_L1_4')
-                .CORE(3, 3, HIDDEN_WIDTH, 1, name=prefix + '_L1_5')
-                .CORE(3, 3, HIDDEN_WIDTH, 1, name=prefix + '_L1_6')
-                .separable_conv(3, 3, 38, 1, relu=False, name=prefix + '_L1_7'))
-
-            (self.feed(prefix + '_concat')
-                .separable_conv(3, 3, HIDDEN_WIDTH, 1, name=prefix + '_L2_1')
-                .CORE(3, 3, HIDDEN_WIDTH, 1, name=prefix + '_L2_2')
-                .CORE(3, 3, HIDDEN_WIDTH, 1, name=prefix + '_L2_3')
-                .CORE(3, 3, HIDDEN_WIDTH, 1, name=prefix + '_L2_4')
-                .CORE(3, 3, HIDDEN_WIDTH, 1, name=prefix + '_L2_5')
-                .CORE(3, 3, HIDDEN_WIDTH, 1, name=prefix + '_L2_6')
-                .separable_conv(3, 3, 19, 1, relu=False, name=prefix + '_L2_7'))
-
-        # final result
-        (self.feed('MConv_Stage6_L2_5',
-                    'MConv_Stage6_L1_5')
-            .concat(3, name='concat_stage7'))
+      # final result
+      (self.feed('MConv_Stage' + str(STAGES + 1) + '_L2_7',
+                  'MConv_Stage' + str(STAGES + 1) + '_L1_7')
+          .concat(3, name='concat_stage' + str(STAGES + 2)))
+      
   def loss_l1_l2(self):
     l1s = []
     l2s = []
     for layer_name in sorted(self.layers.keys()):
-      if '_L1_5' in layer_name:
+      if '_L1_7' in layer_name:
         l1s.append(self.layers[layer_name])
-      if '_L2_5' in layer_name:
+      if '_L2_7' in layer_name:
         l2s.append(self.layers[layer_name])
 
     return l1s, l2s
 
   def loss_last(self):
-    return self.get_output('MConv_Stage6_L1_5'), self.get_output(
-        'MConv_Stage6_L2_5')
+    return self.get_output('MConv_Stage' + str(STAGES + 2) + '_L1_7'), self.get_output(
+        'MConv_Stage' + str(STAGES + 2) + '_L2_7')
 
   def restorable_variables(self):
     vs = {
