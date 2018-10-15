@@ -286,9 +286,9 @@ class BaseNetwork(object):
           normalizer_fn=slim.batch_norm,
           trainable=self.trainable,
           weights_regularizer=None,
-          scope=name + '_pointwise')
+          scope=name + '_compress')
       output = slim.convolution2d(
-          inpt,
+          output,
           c_o,
           stride=1,
           kernel_size=[1, 1],
@@ -299,7 +299,7 @@ class BaseNetwork(object):
           normalizer_fn=slim.batch_norm,
           trainable=self.trainable,
           weights_regularizer=None,
-          scope=name + '_pointwise')
+          scope=name + '_1x1')
       output = slim.convolution2d_transpose(
           output,
           c_o,
@@ -312,11 +312,11 @@ class BaseNetwork(object):
           normalizer_fn=slim.batch_norm,
           trainable=self.trainable,
           weights_regularizer=None,
-          scope=name + '_pointwise')
-      if residual:
-        output = output + inpt
-      if relu:
-        output = tf.nn.leaky_relu(output)
+          scope=name + '_expand')
+    if residual:
+      output = output + inpt
+    if relu:
+      output = tf.nn.leaky_relu(output)
 
     return output
   @layer

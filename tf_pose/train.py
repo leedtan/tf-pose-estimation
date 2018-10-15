@@ -68,7 +68,7 @@ if __name__ == '__main__':
   parser.add_argument('--datapath', type=str, default='../dataset/annotations/')
   parser.add_argument('--training_name', type=str, default='default_name')
   parser.add_argument('--imgpath', type=str, default='../dataset/')
-  parser.add_argument('--batchsize', type=int, default=16 * SHRINK * SHRINK)
+  parser.add_argument('--batchsize', type=int, default=32 * SHRINK * SHRINK)
   parser.add_argument('--gpus', type=int, default=1)
   parser.add_argument('--max-epoch', type=int, default=30)
   parser.add_argument('--gpu_num', type=int, default=0)
@@ -283,6 +283,7 @@ if __name__ == '__main__':
     checktime('starting optimization')
     while True:
       current_lr = args.lr/np.sqrt(gs_num + 10)
+      cur_inpt, cur_vectmap, cur_heatmap = sess.run([input_node, vectmap_node, heatmap_node])
       _, gs_num = sess.run([train_op, global_step], {learning_rate: current_lr})
       if gs_num > step_per_epoch * args.max_epoch:
         break

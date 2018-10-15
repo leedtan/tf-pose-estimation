@@ -4,7 +4,7 @@ import tensorflow as tf
 
 from tf_pose import network_base
 HIDDEN_WIDTH = 256
-STAGES = 5
+STAGES = 6
 class MobilenetNetworkThin(network_base.BaseNetwork):
   def __init__(self, inputs, trainable=True, conv_width=1.0, conv_width2=None):
     self.conv_width = conv_width
@@ -52,27 +52,27 @@ class MobilenetNetworkThin(network_base.BaseNetwork):
           .concat(3, name=prefix + '_concat')
           .separable_conv(3, 3, HIDDEN_WIDTH, 1, name=prefix + '_L1_1')
           .rconv_bottleneck(3, 3, HIDDEN_WIDTH, 1, name=prefix + '_L1_2')
-          # .rconv_bottleneck(3, 3, HIDDEN_WIDTH, 1, name=prefix + '_L1_3')
-          # .rconv_bottleneck(3, 3, HIDDEN_WIDTH, 1, name=prefix + '_L1_4')
-          # .rconv_bottleneck(3, 3, HIDDEN_WIDTH, 1, name=prefix + '_L1_5')
+          .rconv_bottleneck(3, 3, HIDDEN_WIDTH, 1, name=prefix + '_L1_3')
+          .rconv_bottleneck(3, 3, HIDDEN_WIDTH, 1, name=prefix + '_L1_4')
+          .rconv_bottleneck(3, 3, HIDDEN_WIDTH, 1, name=prefix + '_L1_5')
           .rconv_bottleneck(3, 3, HIDDEN_WIDTH, 1, name=prefix + '_L1_6')
           .separable_conv(3, 3, 38, 1, relu=False, name=prefix + '_L1_7'))
 
         (self.feed(prefix + '_concat')
           .separable_conv(3, 3, HIDDEN_WIDTH, 1, name=prefix + '_L2_1')
           .rconv_bottleneck(3, 3, HIDDEN_WIDTH, 1, name=prefix + '_L2_2')
-          # .rconv_bottleneck(3, 3, HIDDEN_WIDTH, 1, name=prefix + '_L2_3')
-          # .rconv_bottleneck(3, 3, HIDDEN_WIDTH, 1, name=prefix + '_L2_4')
-          # .rconv_bottleneck(3, 3, HIDDEN_WIDTH, 1, name=prefix + '_L2_5')
+          .rconv_bottleneck(3, 3, HIDDEN_WIDTH, 1, name=prefix + '_L2_3')
+          .rconv_bottleneck(3, 3, HIDDEN_WIDTH, 1, name=prefix + '_L2_4')
+          .rconv_bottleneck(3, 3, HIDDEN_WIDTH, 1, name=prefix + '_L2_5')
           .rconv_bottleneck(3, 3, HIDDEN_WIDTH, 1, name=prefix + '_L2_6')
           .separable_conv(3, 3, 19, 1, relu=False, name=prefix + '_L2_7'))
         cur_list.append(prefix + '_L1_7')
         cur_list.append(prefix + '_L2_7')
 
       # final result
-      (self.feed('MConv_Stage' + str(STAGES + 1) + '_L2_7',
-                  'MConv_Stage' + str(STAGES + 1) + '_L1_7')
-          .concat(3, name='concat_stage' + str(STAGES + 2)))
+      (self.feed('MConv_Stage' + str(STAGES) + '_L2_7',
+                  'MConv_Stage' + str(STAGES) + '_L1_7')
+          .concat(3, name='concat_stage' + str(STAGES + 1)))
       
   def loss_l1_l2(self):
     l1s = []
@@ -86,8 +86,8 @@ class MobilenetNetworkThin(network_base.BaseNetwork):
     return l1s, l2s
 
   def loss_last(self):
-    return self.get_output('MConv_Stage' + str(STAGES + 2) + '_L1_7'), self.get_output(
-        'MConv_Stage' + str(STAGES + 2) + '_L2_7')
+    return self.get_output('MConv_Stage' + str(STAGES) + '_L1_7'), self.get_output(
+        'MConv_Stage' + str(STAGES) + '_L2_7')
 
   def restorable_variables(self):
     vs = {
