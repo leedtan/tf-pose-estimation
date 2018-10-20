@@ -167,6 +167,7 @@ def pose_crop(meta, x, y, w, h):
 
 def pose_flip(meta):
   r = random.uniform(0, 1.0)
+  meta.img = meta.img
   if r > 0.5:
     return meta
 

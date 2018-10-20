@@ -176,6 +176,10 @@ class BaseNetwork(object):
         name=name)
 
   @layer
+  def divide100(self, input, name):
+    return input/100.
+
+  @layer
   def separable_conv(self,
                      input,
                      k_h,

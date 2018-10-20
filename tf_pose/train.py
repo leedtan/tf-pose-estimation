@@ -72,7 +72,9 @@ if __name__ == '__main__':
   parser.add_argument('--gpus', type=int, default=1)
   parser.add_argument('--max-epoch', type=int, default=30)
   parser.add_argument('--gpu_num', type=int, default=0)
-  parser.add_argument('--lr', type=float, default=0.03)
+  parser.add_argument('--freezeframe', type=int, default=1)
+  parser.add_argument('--advsample', type=int, default=0)
+  parser.add_argument('--lr', type=float, default=0.02)
   parser.add_argument('--modelpath', type=str, default='models/cs3033/')
   parser.add_argument('--logpath', type=str, default='logs/')
   parser.add_argument('--checkpoint', type=str, default='')
@@ -213,6 +215,10 @@ if __name__ == '__main__':
 
   grad_norm_loss, grad_norm_loss_paf, grad_norm_loss_heat = [
     nn_utils.get_grad_norm(opt, l) for l in [total_loss, total_loss_ll_paf, total_loss_ll_heat]]
+
+  dLdX = tf.gradients(
+    total_loss,
+    q_inp)[0]
   # define summary
   tf.summary.scalar("loss", total_loss)
   tf.summary.scalar("loss_lastlayer", total_loss_ll)
@@ -280,11 +286,41 @@ if __name__ == '__main__':
     last_gs_num = last_gs_num2 = 0
     initial_gs_num = sess.run(global_step)
     gs_num = 0
+    adv_idx = 0
     checktime('starting optimization')
+    started = 0
     while True:
       current_lr = args.lr/np.sqrt(gs_num + 10)
-      cur_inpt, cur_vectmap, cur_heatmap = sess.run([input_node, vectmap_node, heatmap_node])
-      _, gs_num = sess.run([train_op, global_step], {learning_rate: current_lr})
+      if (not started) or (not args.freezeframe):
+        cur_inpt, cur_vectmap, cur_heatmap = sess.run([q_inp, q_heat, q_vect])
+      else:
+        cur_inpt, cur_vectmap, cur_heatmap = cur_inpt, cur_vectmap, cur_heatmap
+      fd_raw = {learning_rate: current_lr,
+        q_inp: cur_inpt,
+        q_heat: cur_vectmap,
+        q_vect: cur_heatmap}
+      if args.advsample:
+        grad, l_raw = sess.run([dLdX, total_loss], fd_raw)
+        adv_idx += 1
+        if adv_idx > 2:
+          adv_idx = 0
+        if adv_idx == 0:
+          adv_impact = ((grad > 0) * 1.0 + (grad < 0) * (-1.0) ) * 1e-1
+        if adv_idx == 1:
+          s, g = np.sign(grad), np.abs(grad)
+          grad = s * np.sqrt(g)
+        if adv_idx in [1, 2]:  
+          norm = np.sqrt(np.square(grad).mean())
+          adv_impact = (grad / norm) * 1e-2
+        cur_inpt_adv = cur_inpt + adv_impact
+        fd_adv = {learning_rate: current_lr,
+          q_inp: cur_inpt_adv,
+          q_heat: cur_vectmap,
+          q_vect: cur_heatmap}
+        _, gs_num, l_post = sess.run([train_op, global_step, total_loss], fd_adv)
+        print(adv_idx, l_post - l_raw)
+      else:
+        _, gs_num, l_post = sess.run([train_op, global_step, total_loss], fd_raw)
       if gs_num > step_per_epoch * args.max_epoch:
         break
 

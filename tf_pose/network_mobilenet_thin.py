@@ -4,7 +4,7 @@ import tensorflow as tf
 
 from tf_pose import network_base
 HIDDEN_WIDTH = 256
-STAGES = 6
+STAGES = 4
 class MobilenetNetworkThin(network_base.BaseNetwork):
   def __init__(self, inputs, trainable=True, conv_width=1.0, conv_width2=None):
     self.conv_width = conv_width
@@ -33,10 +33,19 @@ class MobilenetNetworkThin(network_base.BaseNetwork):
             # .separable_conv(3, 3, depth(1024), 2, name='Conv2d_12')
             # .separable_conv(3, 3, depth(1024), 1, name='Conv2d_13')
             )
+    with tf.variable_scope(None, 'Openpose'):
+      (self.feed('image')
+      .divide100(name='normalize')
+      .convb(3, 3, depth(32), 2, name='MConv_Stagepre_0')
+      .rconv_bottleneck(3, 3, depth(32), 1, name='MConv_Stagepre_1')
+      .separable_conv(3, 3, depth(64), 2, name='MConv_Stagepre_2')
+      .rconv_bottleneck(3, 3, depth(64), 1, name='MConv_Stagepre_3')
+      .separable_conv(3, 3, depth(128), 2, name='MConv_Stagepre_4')
+      .rconv_bottleneck(3, 3, depth(128), 1, name='MConv_Stagepre_5'))
 
     (self.feed('Conv2d_3').max_pool(2, 2, 2, 2, name='Conv2d_3_pool'))
 
-    (self.feed('Conv2d_3_pool', 'Conv2d_7', 'Conv2d_11')
+    (self.feed('Conv2d_3_pool', 'MConv_Stagepre_5', 'Conv2d_7', 'Conv2d_11')
         .concat(3, name='feat_concat'))
 
     feature_lv = 'feat_concat'
