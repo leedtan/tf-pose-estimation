@@ -72,9 +72,9 @@ if __name__ == '__main__':
   parser.add_argument('--gpus', type=int, default=1)
   parser.add_argument('--max-epoch', type=int, default=30)
   parser.add_argument('--gpu_num', type=int, default=0)
-  parser.add_argument('--freezeframe', type=int, default=1)
+  parser.add_argument('--freezeframe', type=int, default=0)
   parser.add_argument('--advsample', type=int, default=0)
-  parser.add_argument('--lr', type=float, default=0.02)
+  parser.add_argument('--lr', type=float, default=0.03)
   parser.add_argument('--modelpath', type=str, default='models/cs3033/')
   parser.add_argument('--logpath', type=str, default='logs/')
   parser.add_argument('--checkpoint', type=str, default='')
@@ -291,10 +291,11 @@ if __name__ == '__main__':
     started = 0
     while True:
       current_lr = args.lr/np.sqrt(gs_num + 10)
-      if (not started) or (not args.freezeframe):
-        cur_inpt, cur_vectmap, cur_heatmap = sess.run([q_inp, q_heat, q_vect])
-      else:
+      if started or (not args.freezeframe):
         cur_inpt, cur_vectmap, cur_heatmap = cur_inpt, cur_vectmap, cur_heatmap
+      else:
+        cur_inpt, cur_vectmap, cur_heatmap = sess.run([q_inp, q_heat, q_vect])
+        started = 1
       fd_raw = {learning_rate: current_lr,
         q_inp: cur_inpt,
         q_heat: cur_vectmap,
@@ -311,7 +312,7 @@ if __name__ == '__main__':
           grad = s * np.sqrt(g)
         if adv_idx in [1, 2]:  
           norm = np.sqrt(np.square(grad).mean())
-          adv_impact = (grad / norm) * 1e-2
+          adv_impact = (grad / norm) * 3e-2
         cur_inpt_adv = cur_inpt + adv_impact
         fd_adv = {learning_rate: current_lr,
           q_inp: cur_inpt_adv,
