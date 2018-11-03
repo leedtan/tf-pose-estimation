@@ -2,7 +2,7 @@ import matplotlib as mpl
 mpl.use(
     'Agg'
 )  # training mode, no screen should be open. (It will block training loop)
-
+#python tf_pose/train.py --training_name=adv_sampling2 --checkpoint=models/cs3033/adv_sampling/model-4000
 import argparse
 import logging
 import os
@@ -68,12 +68,12 @@ if __name__ == '__main__':
   parser.add_argument('--datapath', type=str, default='../dataset/annotations/')
   parser.add_argument('--training_name', type=str, default='default_name')
   parser.add_argument('--imgpath', type=str, default='../dataset/')
-  parser.add_argument('--batchsize', type=int, default=32 * SHRINK * SHRINK)
+  parser.add_argument('--batchsize', type=int, default=16 * SHRINK * SHRINK)
   parser.add_argument('--gpus', type=int, default=1)
   parser.add_argument('--max-epoch', type=int, default=30)
   parser.add_argument('--gpu_num', type=int, default=0)
   parser.add_argument('--freezeframe', type=int, default=0)
-  parser.add_argument('--advsample', type=int, default=0)
+  parser.add_argument('--advsample', type=int, default=1)
   parser.add_argument('--lr', type=float, default=0.03)
   parser.add_argument('--modelpath', type=str, default='models/cs3033/')
   parser.add_argument('--logpath', type=str, default='logs/')
@@ -254,13 +254,13 @@ if __name__ == '__main__':
 
     if args.checkpoint:
       logger.info('Restore from checkpoint...')
-      # loader = tf.train.Saver(net.restorable_variables())
-      # loader.restore(sess, tf.train.latest_checkpoint(args.checkpoint))
+      #loader = tf.train.Saver(net.restorable_variables())
+      #loader.restore(sess, tf.train.latest_checkpoint(args.checkpoint))
       checktime('about to restore')
       saver.restore(sess, tf.train.latest_checkpoint(args.checkpoint))
       checktime('restored')
       logger.info('Restore from checkpoint...Done')
-    elif pretrain_path:
+    if pretrain_path:
       checktime('about to restore')
 
       logger.info('Restore pretrained weights...')
@@ -291,11 +291,14 @@ if __name__ == '__main__':
     started = 0
     while True:
       current_lr = args.lr/np.sqrt(gs_num + 10)
-      if started or (not args.freezeframe):
-        cur_inpt, cur_vectmap, cur_heatmap = cur_inpt, cur_vectmap, cur_heatmap
-      else:
+      if not args.freezeframe:
         cur_inpt, cur_vectmap, cur_heatmap = sess.run([q_inp, q_heat, q_vect])
-        started = 1
+      else:
+          if started:
+            cur_inpt, cur_vectmap, cur_heatmap = cur_inpt, cur_vectmap, cur_heatmap
+          else:
+            cur_inpt, cur_vectmap, cur_heatmap = sess.run([q_inp, q_heat, q_vect])
+            started = 1
       fd_raw = {learning_rate: current_lr,
         q_inp: cur_inpt,
         q_heat: cur_vectmap,
@@ -319,7 +322,7 @@ if __name__ == '__main__':
           q_heat: cur_vectmap,
           q_vect: cur_heatmap}
         _, gs_num, l_post = sess.run([train_op, global_step, total_loss], fd_adv)
-        print(adv_idx, l_post - l_raw)
+        print(adv_idx, l_raw, l_post - l_raw)
       else:
         _, gs_num, l_post = sess.run([train_op, global_step, total_loss], fd_raw)
       if gs_num > step_per_epoch * args.max_epoch:
@@ -344,8 +347,9 @@ if __name__ == '__main__':
         last_gs_num = gs_num
 
         file_writer.add_summary(summary, gs_num)
+      #pdb.set_trace()
 
-      if gs_num - last_gs_num >= 10 or (gs_num == 5):
+      if gs_num - last_gs_num >= 100 or (gs_num == 5):
         train_loss, train_loss_ll, train_loss_ll_paf, train_loss_ll_heat, summary, queue_size = sess.run(
             [
                 total_loss, total_loss_ll, total_loss_ll_paf,
@@ -364,20 +368,30 @@ if __name__ == '__main__':
                current_lr, train_loss, train_loss_ll, train_loss_ll_paf,
                train_loss_ll_heat, queue_size))
         last_gs_num = gs_num
-        cur_grad, cur_grad_loss, cur_grad_paf, cur_grad_heat = sess.run(
-          [grad_norm, grad_norm_loss, grad_norm_loss_paf, grad_norm_loss_heat])
-        file_writer.add_summary(
-          tf.Summary(value=[tf.Summary.Value(tag='Grad Norm Total', simple_value=cur_grad)]),
-          gs_num)
-        file_writer.add_summary(
-          tf.Summary(value=[tf.Summary.Value(tag='Grad Norm Loss', simple_value=cur_grad_loss)]),
-          gs_num)
-        file_writer.add_summary(
-          tf.Summary(value=[tf.Summary.Value(tag='Grad Norm PAF', simple_value=cur_grad_paf)]),
-          gs_num)
-        file_writer.add_summary(
-          tf.Summary(value=[tf.Summary.Value(tag='Grad Norm Heat', simple_value=cur_grad_heat)]),
-          gs_num)
+        if gs_num % 4 == 0:
+            cur_grad = sess.run(
+                grad_norm)
+            file_writer.add_summary(
+            tf.Summary(value=[tf.Summary.Value(tag='Grad Norm Total', simple_value=cur_grad)]),
+            gs_num)
+        if gs_num % 4 == 1:
+            cur_grad_loss = sess.run(
+                grad_norm_loss)
+            file_writer.add_summary(
+            tf.Summary(value=[tf.Summary.Value(tag='Grad Norm Loss', simple_value=cur_grad_loss)]),
+            gs_num)
+        if gs_num % 4 == 2:
+            cur_grad_paf = sess.run(
+                grad_norm_loss_heat)
+            file_writer.add_summary(
+            tf.Summary(value=[tf.Summary.Value(tag='Grad Norm PAF', simple_value=cur_grad_paf)]),
+            gs_num)
+        if gs_num % 4 == 3:
+            cur_grad_heat = sess.run(
+                grad_norm_loss_paf)
+            file_writer.add_summary(
+            tf.Summary(value=[tf.Summary.Value(tag='Grad Norm Heat', simple_value=cur_grad_heat)]),
+            gs_num)
         file_writer.add_summary(summary, gs_num)
 
       if gs_num - last_gs_num2 >= 1000:
